@@ -104,8 +104,8 @@ public class Game
 
         Random random = new Random();
 
-        int randomizedStartingPointX = random.Next(3, generationMap.GetLength(0) - 3);
-        int randomizedStartingPointY = random.Next(3, generationMap.GetLength(1) - 3);
+        int randomizedStartingPointX = random.Next(3, mapSizeX - 3);
+        int randomizedStartingPointY = random.Next(3, mapSizeY - 3);
 
         int generatingPointX = randomizedStartingPointX % 2 == 0 ? randomizedStartingPointX - 1 : randomizedStartingPointX;
         int generatingPointY = randomizedStartingPointY % 2 == 0 ? randomizedStartingPointY - 1 : randomizedStartingPointY;
@@ -224,13 +224,10 @@ public class Game
     {
         GenerationFlags[] neighbourFlags = new GenerationFlags[4];
 
-        int generationMapXLength = generationMap.GetLength(0);
-        int generationMapYLength = generationMap.GetLength(1);
-
-        int left = Math.Clamp(pointX - 2, 1, generationMapXLength - 2);
-        int right = Math.Clamp(pointX + 2, 1, generationMapXLength - 2);
-        int up = Math.Clamp(pointY - 2, 1, generationMapYLength - 2);
-        int down = Math.Clamp(pointY + 2, 1, generationMapYLength - 2);
+        int left = Math.Clamp(pointX - 2, 1, mapSizeX - 2);
+        int right = Math.Clamp(pointX + 2, 1, mapSizeX - 2);
+        int up = Math.Clamp(pointY - 2, 1, mapSizeY - 2);
+        int down = Math.Clamp(pointY + 2, 1, mapSizeY - 2);
 
         neighbourFlags[0] = generationMap[left, pointY];
         neighbourFlags[1] = generationMap[right, pointY];
@@ -254,16 +251,13 @@ public class Game
     {
         Random random = new Random();
 
-        int generationMapXLength = generationMap.GetLength(0);
-        int generationMapYLength = generationMap.GetLength(1);
-
         int spawnX = 0;
         int spawnY = 0;
 
         for (int i = 0; i < spawnableCoinsAmount; i++)
         {
-            spawnX = random.Next(collectablesGenerationOffset, generationMapXLength - collectablesGenerationOffset);
-            spawnY = random.Next(collectablesGenerationOffset, generationMapYLength - collectablesGenerationOffset);
+            spawnX = random.Next(collectablesGenerationOffset, mapSizeX - collectablesGenerationOffset);
+            spawnY = random.Next(collectablesGenerationOffset, mapSizeY - collectablesGenerationOffset);
 
             generationMap[spawnX, spawnY] = GenerationFlags.Coin;
         }
@@ -274,9 +268,9 @@ public class Game
         generationMap = new GenerationFlags[mapSizeX, mapSizeY];
         map = new char[mapSizeX, mapSizeY];
 
-        for (int y = 0; y < generationMap.GetLength(1); y++)
+        for (int y = 0; y < mapSizeY; y++)
         {
-            for (int x = 0; x < generationMap.GetLength(0); x++)
+            for (int x = 0; x < mapSizeX; x++)
             {
                 generationMap[x, y] = GenerationFlags.Unexplored;
             }
@@ -285,9 +279,9 @@ public class Game
 
     private void BuildGraphicsMap()
     {
-        for (int y = 0; y < generationMap.GetLength(1); y++)
+        for (int y = 0; y < mapSizeY; y++)
         {
-            for (int x = 0; x < generationMap.GetLength(0); x++)
+            for (int x = 0; x < mapSizeX; x++)
             {
                 switch (generationMap[x, y]) 
                 { 
@@ -455,9 +449,9 @@ public class Game
     {
         Console.SetCursorPosition(0, 0);
 
-        for (int y = 0; y < map.GetLength(1); y++)
+        for (int y = 0; y < mapSizeY; y++)
         {
-            for (int x = 0; x < map.GetLength(0); x++)
+            for (int x = 0; x < mapSizeX; x++)
             {
                 Console.ForegroundColor = GetBlockColor(map[x, y]);
                 Console.Write(map[x, y]);
