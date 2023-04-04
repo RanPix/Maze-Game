@@ -1,5 +1,6 @@
-﻿using System;
-using System.Net.Http.Headers;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
 namespace Maze;
 
@@ -7,14 +8,13 @@ class Program
 {
     static void Main(string[] args)
     {
-        
+        Console.OutputEncoding = Encoding.UTF8;
         Console.CursorVisible = false;
 
         Game game = new Game();
 
+        game.Start();
         game.GameLoop();
-
-        
     }
 }
 
@@ -25,7 +25,6 @@ public enum GenerationFlags
     Ready,
 
     Coin,
-    Key,
     Finish,
 }
 
@@ -38,65 +37,87 @@ public enum GenerationState
 
 public class Game
 {
-    public Action<int, int, int, int> OnPlayerPositionUpdated;
+    public Action<int, int, int, int> OnObjectPositionUpdated;
     public Action<int, int> OnPlayerMove;
 
 
-    int mapSizeX = 43;
-    int mapSizeY = 23;
+    private int mapSizeX = 159;
+    private int mapSizeY = 49;
 
-    private GenerationFlags[,] generationMap;
-    private Stack<(int x, int y)> generationExploredPath = new Stack<(int x, int y)>();
+    private const int maxMapSizeX = 159;
+    private const int maxMapSizeY = 49;
+
+    private const int minMapSize = 13;
+
+    private GenerationFlags[,] generationMap = new GenerationFlags[0, 0];
     private GenerationState generationState = GenerationState.Exploring;
 
-    private char[,] map = new char[1,1];
+    private char[,] map = new char[0, 0];
 
+    private const int collectablesGenerationOffset = 6;
 
 
     private bool playerEscaped;
 
     private int playerX = 1;
     private int playerY = 1;
-
-    private const char playerSprite = 'v';
+    
+    private int spawnableCoinsAmount = 10;
 
     public void GameLoop()
     {
-        GenerateMaze();
-        Console.SetWindowSize(mapSizeX, mapSizeY);
-
-        DrawMap(map);
-        UpdateIndividualGraphic(playerX, playerY, playerX, playerY);
-
-        OnPlayerMove += MovePlayer;
-        OnPlayerPositionUpdated += UpdateIndividualGraphic;
-
-
-        while (!playerEscaped)
+        while (true)
         {
             GetInput();
+
+            if (playerEscaped)
+                SetupGame();
         }
     }
 
+    public void Start()
+    {
+        SetupGame();
+
+        OnPlayerMove += MovePlayer;
+        OnObjectPositionUpdated += UpdateIndividualGraphic;
+    }
+
+    private void SetupGame()
+    {
+        playerX = 1;
+        playerY = 1;
+
+        playerEscaped = false;
+
+        MapSetupUI();
+
+        GenerateMaze();
+        DrawMap(map);
+        UpdateIndividualGraphic(playerX, playerY, playerX, playerY);
+    }
 
     
     private void GenerateMaze()
     {
-        bool mazeGenerated = false;
-
-        int generatingPointX = 1;
-        int generatingPointY = 1;
-
-        int previousGeneratingPointX = 1;
-        int previousGeneratingPointY = 1;
-
-        int[] generatingPointAvailableWayPoints = new int[1];
+        InitializeMap();
 
         Random random = new Random();
 
-        InitializeMap();
+        int randomizedStartingPointX = random.Next(3, generationMap.GetLength(0) - 3);
+        int randomizedStartingPointY = random.Next(3, generationMap.GetLength(1) - 3);
 
-        while (!mazeGenerated)
+        int generatingPointX = randomizedStartingPointX % 2 == 0 ? randomizedStartingPointX - 1 : randomizedStartingPointX;
+        int generatingPointY = randomizedStartingPointY % 2 == 0 ? randomizedStartingPointY - 1 : randomizedStartingPointY;
+
+        int previousGeneratingPointX = generatingPointX;
+        int previousGeneratingPointY = generatingPointY;
+
+        int[] generatingPointAvailableWayPoints = new int[1];
+        Stack<(int x, int y)> generationExploredPath = new Stack<(int x, int y)>();
+
+
+        do
         {
             switch (CheckGeneratingPointNeighbours(generatingPointX, generatingPointY))
             {
@@ -139,14 +160,9 @@ public class Game
 
 
                 case GenerationFlags.Explored:
-                    if (generationExploredPath.Count == 0)
-                    {
-                        mazeGenerated = true;
-                        break;
-                    }    
 
                     generationState = GenerationState.Revert;
-                    
+
                     (generatingPointX, generatingPointY) = generationExploredPath.Pop();
                     previousGeneratingPointX = generatingPointX;
                     previousGeneratingPointY = generatingPointY;
@@ -155,11 +171,11 @@ public class Game
                         generatingPointX, generatingPointY, GenerationFlags.Ready);
                     break;
             }
-
-            BuildGraphicsMap();
-            DrawMap(map);
         }
+        while (generationExploredPath.Count != 0);
 
+        GeneratePickables();
+        generationMap[mapSizeX - 2, mapSizeY - 2] = GenerationFlags.Finish; 
         BuildGraphicsMap();
     }
 
@@ -194,19 +210,12 @@ public class Game
     private GenerationFlags CheckGeneratingPointNeighbours(int pointX, int pointY)
     {
         GenerationFlags[] neighbourFlags = GetGeneratingPointNeighbours(pointX, pointY);
-        bool hasExplored = false;
 
         for (int i = 0; i < 4; i++)
         {
             if (neighbourFlags[i] == GenerationFlags.Unexplored)
                 return GenerationFlags.Unexplored;
-
-            if (neighbourFlags[i] == GenerationFlags.Explored)
-                hasExplored = true;
         }
-
-        if (hasExplored)
-            return GenerationFlags.Explored;
 
         return GenerationFlags.Explored;
     }
@@ -215,10 +224,13 @@ public class Game
     {
         GenerationFlags[] neighbourFlags = new GenerationFlags[4];
 
-        int left = Math.Clamp(pointX - 2, 1, generationMap.GetLength(0) - 2);
-        int right = Math.Clamp(pointX + 2, 1, generationMap.GetLength(0) - 2);
-        int up = Math.Clamp(pointY - 2, 1, generationMap.GetLength(1) - 2);
-        int down = Math.Clamp(pointY + 2, 1, generationMap.GetLength(1) - 2);
+        int generationMapXLength = generationMap.GetLength(0);
+        int generationMapYLength = generationMap.GetLength(1);
+
+        int left = Math.Clamp(pointX - 2, 1, generationMapXLength - 2);
+        int right = Math.Clamp(pointX + 2, 1, generationMapXLength - 2);
+        int up = Math.Clamp(pointY - 2, 1, generationMapYLength - 2);
+        int down = Math.Clamp(pointY + 2, 1, generationMapYLength - 2);
 
         neighbourFlags[0] = generationMap[left, pointY];
         neighbourFlags[1] = generationMap[right, pointY];
@@ -238,9 +250,37 @@ public class Game
         generationMap[toPointX, toPointY] = flag;
     }
 
-    private void FlagPoint(int pointX, int pointY, GenerationFlags flag)
+    private void GeneratePickables()
     {
-        generationMap[pointX, pointY] = flag;
+        Random random = new Random();
+
+        int generationMapXLength = generationMap.GetLength(0);
+        int generationMapYLength = generationMap.GetLength(1);
+
+        int spawnX = 0;
+        int spawnY = 0;
+
+        for (int i = 0; i < spawnableCoinsAmount; i++)
+        {
+            spawnX = random.Next(collectablesGenerationOffset, generationMapXLength - collectablesGenerationOffset);
+            spawnY = random.Next(collectablesGenerationOffset, generationMapYLength - collectablesGenerationOffset);
+
+            generationMap[spawnX, spawnY] = GenerationFlags.Coin;
+        }
+    }
+
+    private void InitializeMap()
+    {
+        generationMap = new GenerationFlags[mapSizeX, mapSizeY];
+        map = new char[mapSizeX, mapSizeY];
+
+        for (int y = 0; y < generationMap.GetLength(1); y++)
+        {
+            for (int x = 0; x < generationMap.GetLength(0); x++)
+            {
+                generationMap[x, y] = GenerationFlags.Unexplored;
+            }
+        }
     }
 
     private void BuildGraphicsMap()
@@ -266,21 +306,11 @@ public class Game
                     case GenerationFlags.Finish:
                         map[x, y] = '^';
                         break;
+
+                    case GenerationFlags.Coin:
+                        map[x, y] = '●';
+                        break;
                 }
-            }
-        }
-    }
-
-    private void InitializeMap()
-    {
-        generationMap = new GenerationFlags[mapSizeX, mapSizeY];
-        map = new char[mapSizeX, mapSizeY];
-
-        for (int y = 0; y < generationMap.GetLength(1); y++)
-        {
-            for (int x = 0; x < generationMap.GetLength(0); x++)
-            {
-                generationMap[x, y] = GenerationFlags.Unexplored;
             }
         }
     }
@@ -289,23 +319,32 @@ public class Game
 
     private void MovePlayer(int moveX, int moveY)
     {
-        switch (GetNextMoveBlock(moveX, moveY))
-        {
-            case '#':
-                return;
+        if (!CheckCollision(moveX, moveY))
+            return;
 
-            case '^':
-                playerEscaped = true;
-                return;
-        }
 
         int newPositionX = Math.Clamp(playerX + moveX, 0, map.Length - 1);
         int newPositionY = Math.Clamp(playerY + moveY, 0, map.Length - 1);
 
-        OnPlayerPositionUpdated.Invoke(playerX, playerY, newPositionX, newPositionY);
+        OnObjectPositionUpdated.Invoke(playerX, playerY, newPositionX, newPositionY);
 
         playerX = newPositionX;
         playerY = newPositionY;
+    }
+
+    private bool CheckCollision(int moveX, int moveY)
+    {
+        switch (GetNextMoveBlock(moveX, moveY))
+        {
+            case '#':
+                return false;
+
+            case '^':
+                playerEscaped = true;
+                return true;
+        }
+
+        return true;
     }
 
     private char GetNextMoveBlock(int moveX, int moveY)
@@ -333,6 +372,75 @@ public class Game
 
 
 
+    private void MapSetupUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
+    {
+        Console.Clear();
+
+        bool settedUp = false;
+
+        while (!settedUp)
+        {
+            Console.Clear();
+
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine("Enter the map size:");
+            Console.WriteLine("Width: ");
+            Console.Write("Height: ");
+
+            Console.SetCursorPosition(0, 1);
+            Console.Write("Width: ");
+            try
+            {
+                mapSizeX = int.Parse(Console.ReadLine());
+            }
+            catch
+            {
+                Console.SetCursorPosition(0, 4);
+                Console.Write("Wrong input!");
+                continue;
+            }
+            if (mapSizeX % 2 == 0)
+                mapSizeX--;
+
+            mapSizeX = Math.Clamp(mapSizeX, minMapSize, maxMapSizeX);
+
+
+            Console.SetCursorPosition(0, 2);
+            Console.Write("Height: ");
+            try
+            {
+                mapSizeY = int.Parse(Console.ReadLine());
+            }
+            catch
+            {
+                Console.SetCursorPosition(0, 4);
+                Console.Write("Wrong input!");
+                continue;
+            }
+            if (mapSizeY % 2 == 0)
+                mapSizeY--;
+
+            mapSizeY = Math.Clamp(mapSizeY, minMapSize, maxMapSizeY);
+
+            try
+            {
+                Console.SetWindowSize(mapSizeX, mapSizeY);
+            }
+            catch
+            {
+                Console.SetCursorPosition(0, 4);
+                Console.Write("This map is too big for the size of the window!");
+                continue;
+            }
+
+            settedUp = true;
+        }
+
+        Console.Clear();
+    }
+
+
+
     private void UpdateIndividualGraphic(int oldX, int oldY, int newX, int newY)
     {
         Console.SetCursorPosition(oldX, oldY);
@@ -343,16 +451,39 @@ public class Game
     }
 
 
-    public void DrawMap(char[,] map)
+    private void DrawMap(char[,] map)
     {
+        Console.SetCursorPosition(0, 0);
+
         for (int y = 0; y < map.GetLength(1); y++)
         {
             for (int x = 0; x < map.GetLength(0); x++)
             {
-                Console.SetCursorPosition(x, y);
-                
+                Console.ForegroundColor = GetBlockColor(map[x, y]);
                 Console.Write(map[x, y]);
+
+                Console.ForegroundColor = ConsoleColor.White;
             }
+            Console.Write('\n');
         }
+
+        Console.SetCursorPosition(0, 0);
+    }
+
+    private ConsoleColor GetBlockColor(char block)
+    {
+        switch (block)
+        {
+            case '#':
+                return ConsoleColor.DarkGray;
+
+            case '^':
+                return ConsoleColor.Green;
+
+            case '●':
+                return ConsoleColor.Yellow;
+        }
+
+        return ConsoleColor.White;
     }
 }
