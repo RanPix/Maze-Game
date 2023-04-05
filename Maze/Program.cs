@@ -1,14 +1,10 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-
-namespace Maze;
+﻿namespace Maze;
 
 class Program
 {
     static void Main(string[] args)
     {
-        Console.OutputEncoding = Encoding.UTF8;
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.CursorVisible = false;
 
         Game game = new Game();
@@ -45,7 +41,7 @@ public class Game
     private int mapSizeY = 49;
 
     private const int maxMapSizeX = 159;
-    private const int maxMapSizeY = 49;
+    private const int maxMapSizeY = 159;
 
     private const int minMapSize = 13;
 
