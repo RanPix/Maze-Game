@@ -38,7 +38,7 @@ public enum GenerationState
 public class Game
 {
     public Action<int, int, int, int> OnObjectPositionUpdated;
-    public Action<int, int> OnPlayerMove;
+    public Action<int, int> OnMoveInput;
 
 
     private int mapSizeX = 159;
@@ -79,7 +79,7 @@ public class Game
     {
         SetupGame();
 
-        OnPlayerMove += MovePlayer;
+        OnMoveInput += MovePlayer;
         OnObjectPositionUpdated += UpdateIndividualGraphic;
     }
 
@@ -160,7 +160,6 @@ public class Game
 
 
                 case GenerationFlags.Explored:
-
                     generationState = GenerationState.Revert;
 
                     (generatingPointX, generatingPointY) = generationExploredPath.Pop();
@@ -361,7 +360,7 @@ public class Game
                      keyInput == ConsoleKey.D ? 1 : 0;
 
 
-        OnPlayerMove.Invoke(deltaY, deltaX);
+        OnMoveInput.Invoke(deltaY, deltaX);
     }
 
 
@@ -374,12 +373,10 @@ public class Game
 
         while (!settedUp)
         {
-            Console.Clear();
-
             Console.SetCursorPosition(0, 0);
             Console.WriteLine("Enter the map size:");
-            Console.WriteLine("Width: ");
-            Console.Write("Height: ");
+            Console.WriteLine("Width:                                                        ");
+            Console.Write("Height:                                                           ");
 
             Console.SetCursorPosition(0, 1);
             Console.Write("Width: ");
