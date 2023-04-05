@@ -150,6 +150,7 @@ public class Game
                         continue;
                     }
 
+
                     FlagPointsBetween(previousGeneratingPointX, previousGeneratingPointY,
                         generatingPointX, generatingPointY, GenerationFlags.Explored);
 
@@ -238,8 +239,8 @@ public class Game
 
     private void FlagPointsBetween(int fromPointX, int fromPointY, int toPointX, int toPointY, GenerationFlags flag)
     {
-        int midPointX = (fromPointX + toPointX) / 2;
-        int midPointY = (fromPointY + toPointY) / 2;
+        int midPointX = (fromPointX + toPointX) >> 1;
+        int midPointY = (fromPointY + toPointY) >> 1;
 
         generationMap[fromPointX, fromPointY] = flag;
         generationMap[midPointX, midPointY] = flag;
