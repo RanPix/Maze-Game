@@ -36,7 +36,7 @@ public class Game
     {
         while (true)
         {
-            GetMovementInput();
+            GetInput();
             MovePlayer();
 
             if (playerEscaped)
@@ -348,7 +348,7 @@ public class Game
     }
 
 
-    public void GetMovementInput()
+    public void GetInput()
     {
         if (latestInput != null)
             latestInput = null;
