@@ -7,7 +7,7 @@ public enum GenerationFlags
     Ready,
 
     Coin,
-    Finish,
+    Escape,
 }
 
 

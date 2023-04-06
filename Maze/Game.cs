@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace Maze;
 
@@ -10,14 +11,14 @@ public class Game
     private const int maxMapSizeX = 159;
     private const int maxMapSizeY = 159;
 
-    private const int minMapSize = 13;
+    private const int minMapSize = 9;
 
     private GenerationFlags[,] generationMap = new GenerationFlags[0, 0];
     private GenerationState generationState = GenerationState.Exploring;
 
     private char[,] map = new char[0, 0];
 
-    private const int collectablesGenerationOffset = 6;
+    private const int collectablesGenerationOffset = 2;
 
 
     private bool playerEscaped;
@@ -26,8 +27,11 @@ public class Game
     private int playerY = 1;
 
     private int collectedCoins = 0;
-
     private int spawnableCoinsAmount = 10;
+
+
+    private int escapeX = 0;
+    private int escapeY = 0;
 
 
     private ConsoleKey? latestInput;
@@ -37,6 +41,8 @@ public class Game
         while (true)
         {
             GetInput();
+
+            EscapeUpdate();
             MovePlayer();
 
             if (playerEscaped)
@@ -53,9 +59,9 @@ public class Game
 
     private void SetupGame()
     {
-        SetupPlayer();
+        MainMenuUI();
 
-        MapSetupUI();
+        SetupPlayer();
 
         GenerateMaze();
         DrawMap();
@@ -140,8 +146,12 @@ public class Game
         }
         while (generationExploredPath.Count != 0);
 
-        GeneratePickables();
-        generationMap[mapSizeX - 2, mapSizeY - 2] = GenerationFlags.Finish;
+        GenerateCoins();
+
+        escapeX = mapSizeX - 2;
+        escapeY = mapSizeY - 2;
+        generationMap[escapeX, escapeY] = GenerationFlags.Escape;
+
         BuildGraphicsMap();
     }
 
@@ -213,7 +223,7 @@ public class Game
         generationMap[toPointX, toPointY] = flag;
     }
 
-    private void GeneratePickables()
+    private void GenerateCoins()
     {
         Random random = new Random();
 
@@ -226,6 +236,12 @@ public class Game
 
             spawnX = random.Next(collectablesGenerationOffset, mapSizeX - collectablesGenerationOffset);
             spawnY = random.Next(collectablesGenerationOffset, mapSizeY - collectablesGenerationOffset);
+
+            if (generationMap[spawnX, spawnY] == GenerationFlags.Coin)
+            {
+                i--;
+                continue;
+            }
 
             generationMap[spawnX, spawnY] = GenerationFlags.Coin;
         }
@@ -265,8 +281,8 @@ public class Game
                         map[x, y] = '#';
                         break;
 
-                    case GenerationFlags.Finish:
-                        map[x, y] = '^';
+                    case GenerationFlags.Escape:
+                        map[x, y] = 'x';
                         break;
 
                     case GenerationFlags.Coin:
@@ -301,8 +317,6 @@ public class Game
 
         int newPositionX = Math.Clamp(playerX + deltaX, 0, map.Length - 1);
         int newPositionY = Math.Clamp(playerY + deltaY, 0, map.Length - 1);
-
-        //OnObjectPositionUpdated.Invoke(playerX, playerY, newPositionX, newPositionY);
 
         playerX = newPositionX;
         playerY = newPositionY;
@@ -348,7 +362,7 @@ public class Game
     }
 
 
-    public void GetInput()
+    private void GetInput()
     {
         if (latestInput != null)
             latestInput = null;
@@ -360,6 +374,17 @@ public class Game
     }
 
 
+    private void EscapeUpdate()
+    {
+        if (collectedCoins < 10)
+        {
+            map[escapeX, escapeY] = 'x';
+            return;
+        }
+
+        map[escapeX, escapeY] = '^';
+    }
+
 
     private void GameUI()
     {
@@ -368,9 +393,10 @@ public class Game
         Console.WriteLine($"{SetColor(255, 255, 255)}Collected Coins: {SetColor(255, 255, 0)}{collectedCoins} {SetColor(255, 255, 255)}");
     }
 
-    private void MapSetupUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
+    private void MainMenuUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
     {
         Console.Clear();
+        Console.SetWindowSize(50, 14);
 
         while (true)
         {
@@ -380,8 +406,15 @@ public class Game
             Console.Write("Height:                                                           \n\n\n\n");
 
             Console.WriteLine($"{SetColor(255, 255, 0)}● {SetColor(255, 255, 255)}Coin");
+            Console.WriteLine($"{SetColor(255, 255, 255)}x Escape closed");
             Console.WriteLine($"{SetColor(0, 255, 0)}^ {SetColor(255, 255, 255)}Escape");
-            Console.Write($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall");
+            Console.WriteLine($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall");
+            
+            if (playerEscaped)
+                Console.WriteLine($"{SetColor(0, 255, 0)}Congratulations! You escaped the maze! {SetColor(255, 255, 255)}");
+
+            Console.Write($"\n\nTo {SetColor(0, 255, 0)}win{SetColor(255, 255, 255)} you have to get all {SetColor(255, 255, 0)}10 coins{SetColor(255, 255, 255)}");
+
 
             Console.SetCursorPosition(0, 1);
             Console.Write("Width: ");
@@ -392,7 +425,7 @@ public class Game
             catch
             {
                 Console.SetCursorPosition(0, 4);
-                Console.Write("Wrong input!                                                            ");
+                Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
                 continue;
             }
             if (mapSizeX % 2 == 0)
@@ -410,7 +443,7 @@ public class Game
             catch
             {
                 Console.SetCursorPosition(0, 4);
-                Console.Write("Wrong input!");
+                Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
                 continue;
             }
             if (mapSizeY % 2 == 0)
@@ -420,12 +453,12 @@ public class Game
 
             try
             {
-                Console.SetWindowSize(mapSizeX + 6, mapSizeY + 5);
+                Console.SetWindowSize(mapSizeX + 12, mapSizeY + 5);
             }
             catch
             {
                 Console.SetCursorPosition(0, 4);
-                Console.Write("This map is too big for the size of the window!");
+                Console.Write($"{SetColor(255, 0, 0)}This map is too big for the size of the window!{SetColor(255, 255, 255)}");
                 continue;
             }
 
@@ -467,6 +500,9 @@ public class Game
             case '^':
                 return SetColor(0, 255, 0) + '^';
 
+            case 'x':
+                return SetColor(255, 0, 0) + 'x';
+
             case '●':
                 return SetColor(255, 255, 0) + '●';
 
@@ -478,5 +514,5 @@ public class Game
     }
 
     private string SetColor(byte r, byte g, byte b)
-        => $"\u001b[38;2;{r};{g};{b}m";
+        => $"\x1b[38;2;{r};{g};{b}m";
 }
