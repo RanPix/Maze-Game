@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 
 namespace Maze;
 
@@ -506,7 +505,7 @@ public class Game
     private string GetBlock(int x, int y)
     {
         if (playerX == x && playerY == y)
-            return SetColor(255, 255, 255) + 'v';
+            return SetColor(255, 255, 255) + 'v'; // якби у грі були ще рухомі об'єкти окрім гравця то я би ще зробив entity мапу замість цього
 
         switch (map[x, y])
         {

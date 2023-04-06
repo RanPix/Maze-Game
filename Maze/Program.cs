@@ -33,6 +33,7 @@ class Program
         SetConsoleMode(handle, mode | 0x4);
 
         Console.CursorVisible = false;
+        Console.Title = "Maze";
 
         Game game = new Game();
 
