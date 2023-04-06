@@ -32,7 +32,6 @@ class Program
         GetConsoleMode(handle, out mode);
         SetConsoleMode(handle, mode | 0x4);
 
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.CursorVisible = false;
 
         Game game = new Game();

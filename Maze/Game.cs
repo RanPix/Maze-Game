@@ -18,10 +18,11 @@ public class Game
 
     private char[,] map = new char[0, 0];
 
-    private const int collectablesGenerationOffset = 2;
+    private const int collectablesGenerationOffset = 1;
 
 
     private bool playerEscaped;
+    private bool playerSurrendered;
 
     private int playerX = 1;
     private int playerY = 1;
@@ -41,11 +42,12 @@ public class Game
         while (true)
         {
             GetInput();
+            CheckInput();
 
             EscapeUpdate();
             MovePlayer();
 
-            if (playerEscaped)
+            if (playerEscaped || playerSurrendered)
                 SetupGame();
 
             DrawMap();
@@ -61,9 +63,9 @@ public class Game
     {
         MainMenuUI();
 
+        GenerateMaze();
         SetupPlayer();
 
-        GenerateMaze();
         DrawMap();
     }
 
@@ -89,8 +91,6 @@ public class Game
 
         do
         {
-            random = new Random();
-
             switch (CheckGeneratingPointNeighbours(generatingPointX, generatingPointY))
             {
                 case GenerationFlags.Unexplored:
@@ -146,11 +146,11 @@ public class Game
         }
         while (generationExploredPath.Count != 0);
 
-        GenerateCoins();
-
         escapeX = mapSizeX - 2;
         escapeY = mapSizeY - 2;
         generationMap[escapeX, escapeY] = GenerationFlags.Escape;
+
+        GenerateCoins();
 
         BuildGraphicsMap();
     }
@@ -232,12 +232,12 @@ public class Game
 
         for (int i = 0; i < spawnableCoinsAmount; i++)
         {
-            random = new Random();
-
             spawnX = random.Next(collectablesGenerationOffset, mapSizeX - collectablesGenerationOffset);
             spawnY = random.Next(collectablesGenerationOffset, mapSizeY - collectablesGenerationOffset);
 
-            if (generationMap[spawnX, spawnY] == GenerationFlags.Coin)
+            if (generationMap[spawnX, spawnY] is GenerationFlags.Coin or 
+                                                 GenerationFlags.Unexplored or 
+                                                 GenerationFlags.Escape)
             {
                 i--;
                 continue;
@@ -286,7 +286,7 @@ public class Game
                         break;
 
                     case GenerationFlags.Coin:
-                        map[x, y] = '●';
+                        map[x, y] = '*';
                         break;
                 }
             }
@@ -303,6 +303,7 @@ public class Game
         collectedCoins = 0;
 
         playerEscaped = false;
+        playerSurrendered = false;
     }
 
     private void MovePlayer()
@@ -336,7 +337,7 @@ public class Game
                 playerEscaped = true;
                 return true;
 
-            case '●':
+            case '*':
                 map[newPlayerX, newPlayerY] = ' ';
                 collectedCoins++;
                 return true;
@@ -359,6 +360,16 @@ public class Game
     private char GetNextMoveBlock(int moveX, int moveY)
     {
         return map[playerX + moveX, playerY + moveY];
+    }
+
+    private void CheckInput()
+    {
+        switch (latestInput)
+        {
+            case ConsoleKey.T:
+                playerSurrendered = true;
+                return;
+        }
     }
 
 
@@ -386,17 +397,17 @@ public class Game
     }
 
 
-    private void GameUI()
+    private void InGameUI()
     {
         Console.SetCursorPosition(0, mapSizeY);
 
-        Console.WriteLine($"{SetColor(255, 255, 255)}Collected Coins: {SetColor(255, 255, 0)}{collectedCoins} {SetColor(255, 255, 255)}");
+        Console.Write($"{SetColor(255, 255, 255)}Collected Coins: {SetColor(255, 255, 0)}{collectedCoins} {SetColor(255, 255, 255)}");
     }
 
     private void MainMenuUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
     {
         Console.Clear();
-        Console.SetWindowSize(50, 14);
+        Console.SetWindowSize(50, 17);
 
         while (true)
         {
@@ -405,15 +416,20 @@ public class Game
             Console.WriteLine("Width:                                                        ");
             Console.Write("Height:                                                           \n\n\n\n");
 
-            Console.WriteLine($"{SetColor(255, 255, 0)}● {SetColor(255, 255, 255)}Coin");
-            Console.WriteLine($"{SetColor(255, 255, 255)}x Escape closed");
+            Console.WriteLine($"{SetColor(255, 255, 0)}* {SetColor(255, 255, 255)}Coin");
+            Console.WriteLine($"{SetColor(255, 0, 0)}x {SetColor(255, 255, 255)}Escape closed");
             Console.WriteLine($"{SetColor(0, 255, 0)}^ {SetColor(255, 255, 255)}Escape");
-            Console.WriteLine($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall");
-            
+            Console.WriteLine($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall \n");
+
+            Console.WriteLine($"{SetColor(255, 255, 255)}Press {SetColor(0, 255, 0)}T {SetColor(255, 255, 255)}To surrender \n");
+
             if (playerEscaped)
                 Console.WriteLine($"{SetColor(0, 255, 0)}Congratulations! You escaped the maze! {SetColor(255, 255, 255)}");
 
-            Console.Write($"\n\nTo {SetColor(0, 255, 0)}win{SetColor(255, 255, 255)} you have to get all {SetColor(255, 255, 0)}10 coins{SetColor(255, 255, 255)}");
+            else if (playerSurrendered)
+                Console.WriteLine($"{SetColor(255, 0, 0)}You have surrendered... {SetColor(255, 255, 255)}");
+
+            Console.Write($"\n\nTo {SetColor(0, 255, 0)}escape{SetColor(255, 255, 255)} you have to get all {SetColor(255, 255, 0)}10 coins{SetColor(255, 255, 255)}");
 
 
             Console.SetCursorPosition(0, 1);
@@ -453,7 +469,7 @@ public class Game
 
             try
             {
-                Console.SetWindowSize(mapSizeX + 12, mapSizeY + 5);
+                Console.SetWindowSize(mapSizeX + 12, mapSizeY + 1);
             }
             catch
             {
@@ -484,7 +500,7 @@ public class Game
         Console.SetCursorPosition(0, 0);
         Console.Write(screenBuffer);
 
-        GameUI();
+        InGameUI();
     }
 
     private string GetBlock(int x, int y)
@@ -503,8 +519,8 @@ public class Game
             case 'x':
                 return SetColor(255, 0, 0) + 'x';
 
-            case '●':
-                return SetColor(255, 255, 0) + '●';
+            case '*':
+                return SetColor(255, 255, 0) + '*';
 
             case ' ':
                 return " ";
