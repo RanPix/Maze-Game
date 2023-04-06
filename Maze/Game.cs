@@ -10,7 +10,7 @@ public class Game
     private const int maxMapSizeX = 159;
     private const int maxMapSizeY = 159;
 
-    private const int minMapSize = 9;
+    private const int minMapSize = 7;
 
     private GenerationFlags[,] generationMap = new GenerationFlags[0, 0];
     private GenerationState generationState = GenerationState.Exploring;
@@ -27,7 +27,7 @@ public class Game
     private int playerY = 1;
 
     private int collectedCoins = 0;
-    private int spawnableCoinsAmount = 10;
+    private const int maxAmountOfCoins = 10;
 
 
     private int escapeX = 0;
@@ -50,6 +50,7 @@ public class Game
                 SetupGame();
 
             DrawMap();
+            InGameUI();
         }
     }
 
@@ -75,8 +76,8 @@ public class Game
 
         Random random = new Random();
 
-        int randomizedStartingPointX = random.Next(3, mapSizeX - 3);
-        int randomizedStartingPointY = random.Next(3, mapSizeY - 3);
+        int randomizedStartingPointX = random.Next(1, mapSizeX - 1);
+        int randomizedStartingPointY = random.Next(1, mapSizeY - 1);
 
         int generatingPointX = randomizedStartingPointX % 2 == 0 ? randomizedStartingPointX - 1 : randomizedStartingPointX;
         int generatingPointY = randomizedStartingPointY % 2 == 0 ? randomizedStartingPointY - 1 : randomizedStartingPointY;
@@ -229,7 +230,7 @@ public class Game
         int spawnX = 0;
         int spawnY = 0;
 
-        for (int i = 0; i < spawnableCoinsAmount; i++)
+        for (int i = 0; i < maxAmountOfCoins; i++)
         {
             spawnX = random.Next(collectablesGenerationOffset, mapSizeX - collectablesGenerationOffset);
             spawnY = random.Next(collectablesGenerationOffset, mapSizeY - collectablesGenerationOffset);
@@ -266,28 +267,15 @@ public class Game
         {
             for (int x = 0; x < mapSizeX; x++)
             {
-                switch (generationMap[x, y])
+                map[x, y] = generationMap[x, y] switch
                 {
-                    case GenerationFlags.Ready:
-                        map[x, y] = ' ';
-                        break;
-
-                    case GenerationFlags.Explored:
-                        map[x, y] = ' ';
-                        break;
-
-                    case GenerationFlags.Unexplored:
-                        map[x, y] = '#';
-                        break;
-
-                    case GenerationFlags.Escape:
-                        map[x, y] = 'x';
-                        break;
-
-                    case GenerationFlags.Coin:
-                        map[x, y] = '*';
-                        break;
-                }
+                    GenerationFlags.Ready => ' ',
+                    GenerationFlags.Explored => ' ',
+                    GenerationFlags.Unexplored => '#',
+                    GenerationFlags.Escape => 'x',
+                    GenerationFlags.Coin => '*',
+                    _ => 'n',
+                };
             }
         }
     }
@@ -386,7 +374,7 @@ public class Game
 
     private void EscapeUpdate()
     {
-        if (collectedCoins < 10)
+        if (collectedCoins < maxAmountOfCoins)
         {
             map[escapeX, escapeY] = 'x';
             return;
@@ -406,7 +394,8 @@ public class Game
     private void MainMenuUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
     {
         Console.Clear();
-        Console.SetWindowSize(50, 17);
+        Console.SetWindowSize(50, 18);
+        Console.CursorVisible = true;
 
         while (true)
         {
@@ -415,6 +404,7 @@ public class Game
             Console.WriteLine("Width:                                                        ");
             Console.Write("Height:                                                           \n\n\n\n");
 
+            Console.WriteLine($"{SetColor(255, 255, 255)}v You");
             Console.WriteLine($"{SetColor(255, 255, 0)}* {SetColor(255, 255, 255)}Coin");
             Console.WriteLine($"{SetColor(255, 0, 0)}x {SetColor(255, 255, 255)}Escape closed");
             Console.WriteLine($"{SetColor(0, 255, 0)}^ {SetColor(255, 255, 255)}Escape");
@@ -480,6 +470,7 @@ public class Game
             break;
         }
 
+        Console.CursorVisible = false;
         Console.Clear();
     }
 
@@ -498,8 +489,6 @@ public class Game
 
         Console.SetCursorPosition(0, 0);
         Console.Write(screenBuffer);
-
-        InGameUI();
     }
 
     private string GetBlock(int x, int y)
@@ -507,25 +496,15 @@ public class Game
         if (playerX == x && playerY == y)
             return SetColor(255, 255, 255) + 'v'; // якби у грі були ще рухомі об'єкти окрім гравця то я би ще зробив entity мапу замість цього
 
-        switch (map[x, y])
+        return map[x, y] switch
         {
-            case '#':
-                return SetColor(69, 69, 69) + '#';
-
-            case '^':
-                return SetColor(0, 255, 0) + '^';
-
-            case 'x':
-                return SetColor(255, 0, 0) + 'x';
-
-            case '*':
-                return SetColor(255, 255, 0) + '*';
-
-            case ' ':
-                return " ";
-        }
-
-        return SetColor(255, 255, 255) + 'n';
+            '#' => SetColor(69, 69, 69) + '#',
+            '^' => SetColor(0, 255, 0) + '^',
+            'x' => SetColor(255, 0, 0) + 'x',
+            '*' => SetColor(255, 255, 0) + '*',
+            ' ' => " ",
+            _ => SetColor(255, 255, 255) + 'n',
+        };
     }
 
     private string SetColor(byte r, byte g, byte b)
