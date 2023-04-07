@@ -115,14 +115,6 @@ public class Game
                             break;
                     }
 
-                    if (!CheckGeneratingPointOutOfBounds(generatingPointX, generatingPointY))
-                    {
-                        generatingPointX = previousGeneratingPointX;
-                        generatingPointY = previousGeneratingPointY;
-                        continue;
-                    }
-
-
                     FlagPointsBetween(previousGeneratingPointX, previousGeneratingPointY,
                         generatingPointX, generatingPointY, GenerationFlags.Explored);
 
@@ -153,17 +145,6 @@ public class Game
         GenerateCoins();
 
         BuildGraphicsMap();
-    }
-
-    private bool CheckGeneratingPointOutOfBounds(int pointX, int pointY)
-    {
-        if (pointX == -1 || pointY == -1)
-            return false;
-
-        if (pointX >= generationMap.GetLength(0) || pointY == generationMap.GetLength(1))
-            return false;
-
-        return true;
     }
 
     private int[] GetAvailableWayPoints(int pointX, int pointY)
@@ -199,16 +180,16 @@ public class Game
     private GenerationFlags[] GetGeneratingPointNeighbours(int pointX, int pointY)
     {
         GenerationFlags[] neighbourFlags = new GenerationFlags[4];
+        
+        int left = pointX - 2;
+        int right = pointX + 2;
+        int up = pointY - 2;
+        int down = pointY + 2;
 
-        int left = Math.Clamp(pointX - 2, 1, mapSizeX - 2);
-        int right = Math.Clamp(pointX + 2, 1, mapSizeX - 2);
-        int up = Math.Clamp(pointY - 2, 1, mapSizeY - 2);
-        int down = Math.Clamp(pointY + 2, 1, mapSizeY - 2);
-
-        neighbourFlags[0] = generationMap[left, pointY];
-        neighbourFlags[1] = generationMap[right, pointY];
-        neighbourFlags[2] = generationMap[pointX, up];
-        neighbourFlags[3] = generationMap[pointX, down];
+        neighbourFlags[0] = left > 0 ? generationMap[left, pointY] : GenerationFlags.Null;
+        neighbourFlags[1] = right < mapSizeX - 1 ? generationMap[right, pointY] : GenerationFlags.Null;
+        neighbourFlags[2] = up > 0 ? generationMap[pointX, up] : GenerationFlags.Null;
+        neighbourFlags[3] = down < mapSizeY - 1  ? generationMap[pointX, down] : GenerationFlags.Null;
 
         return neighbourFlags;
     }
@@ -217,9 +198,9 @@ public class Game
     {
         int midPointX = (fromPointX + toPointX) >> 1;
         int midPointY = (fromPointY + toPointY) >> 1;
-
+        
         generationMap[fromPointX, fromPointY] = flag;
-        generationMap[midPointX, midPointY] = flag;
+        generationMap[midPointX, midPointY] = GenerationFlags.Ready;
         generationMap[toPointX, toPointY] = flag;
     }
 
@@ -270,7 +251,7 @@ public class Game
                 map[x, y] = generationMap[x, y] switch
                 {
                     GenerationFlags.Ready => ' ',
-                    GenerationFlags.Explored => ' ',
+                    GenerationFlags.Explored => '.',
                     GenerationFlags.Unexplored => '#',
                     GenerationFlags.Escape => 'x',
                     GenerationFlags.Coin => '*',
@@ -499,6 +480,7 @@ public class Game
         return map[x, y] switch
         {
             '#' => SetColor(69, 69, 69) + '#',
+            '.' => SetColor(35, 35, 35) + '.',
             '^' => SetColor(0, 255, 0) + '^',
             'x' => SetColor(255, 0, 0) + 'x',
             '*' => SetColor(255, 255, 0) + '*',
