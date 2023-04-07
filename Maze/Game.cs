@@ -85,8 +85,8 @@ public class Game
         int previousGeneratingPointX = generatingPointX;
         int previousGeneratingPointY = generatingPointY;
 
-        int[] generatingPointAvailableWayPoints = new int[1];
-        Stack<(int x, int y)> generationExploredPath = new Stack<(int x, int y)>();
+        int[] availableWayPoints = new int[4];
+        Stack<(int x, int y)> exploredPath = new Stack<(int x, int y)>();
 
 
         do
@@ -95,10 +95,10 @@ public class Game
             {
                 case GenerationFlags.Unexplored:
                     generationState = GenerationState.Exploring;
+                    
+                    availableWayPoints = GetAvailableWayPoints(generatingPointX, generatingPointY);
 
-                    generatingPointAvailableWayPoints = GetAvailableWayPoints(generatingPointX, generatingPointY);
-
-                    switch (generatingPointAvailableWayPoints[random.Next(0, generatingPointAvailableWayPoints.Length)])
+                    switch (availableWayPoints[random.Next(0, availableWayPoints.Length)])
                     {
                         case 0: // left
                             generatingPointX -= 2;
@@ -118,7 +118,7 @@ public class Game
                     FlagPointsBetween(previousGeneratingPointX, previousGeneratingPointY,
                         generatingPointX, generatingPointY, GenerationFlags.Explored);
 
-                    generationExploredPath.Push((generatingPointX, generatingPointY));
+                    exploredPath.Push((generatingPointX, generatingPointY));
                     previousGeneratingPointX = generatingPointX;
                     previousGeneratingPointY = generatingPointY;
                     break;
@@ -127,7 +127,7 @@ public class Game
                 case GenerationFlags.Explored:
                     generationState = GenerationState.Revert;
 
-                    (generatingPointX, generatingPointY) = generationExploredPath.Pop();
+                    (generatingPointX, generatingPointY) = exploredPath.Pop();
                     previousGeneratingPointX = generatingPointX;
                     previousGeneratingPointY = generatingPointY;
 
@@ -136,7 +136,7 @@ public class Game
                     break;
             }
         }
-        while (generationExploredPath.Count != 0);
+        while (exploredPath.Count != 0);
 
         escapeX = mapSizeX - 2;
         escapeY = mapSizeY - 2;
@@ -380,73 +380,10 @@ public class Game
 
         while (true)
         {
-            Console.SetCursorPosition(0, 0);
-            Console.WriteLine("Enter the map size:");
-            Console.WriteLine("Width:                                                        ");
-            Console.Write("Height:                                                           \n\n\n\n");
+            DrawMainMenuInfoUI();
 
-            Console.WriteLine($"{SetColor(255, 255, 255)}v You");
-            Console.WriteLine($"{SetColor(255, 255, 0)}* {SetColor(255, 255, 255)}Coin");
-            Console.WriteLine($"{SetColor(255, 0, 0)}x {SetColor(255, 255, 255)}Escape closed");
-            Console.WriteLine($"{SetColor(0, 255, 0)}^ {SetColor(255, 255, 255)}Escape");
-            Console.WriteLine($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall \n");
-
-            Console.WriteLine($"{SetColor(255, 255, 255)}Press {SetColor(0, 255, 0)}T {SetColor(255, 255, 255)}To surrender \n");
-
-            if (playerEscaped)
-                Console.WriteLine($"{SetColor(0, 255, 0)}Congratulations! You escaped the maze! {SetColor(255, 255, 255)}");
-
-            else if (playerSurrendered)
-                Console.WriteLine($"{SetColor(255, 0, 0)}You have surrendered... {SetColor(255, 255, 255)}");
-
-            Console.Write($"\n\nTo {SetColor(0, 255, 0)}escape{SetColor(255, 255, 255)} you have to get all {SetColor(255, 255, 0)}10 coins{SetColor(255, 255, 255)}");
-
-
-            Console.SetCursorPosition(0, 1);
-            Console.Write("Width: ");
-            try
-            {
-                mapSizeX = int.Parse(Console.ReadLine());
-            }
-            catch
-            {
-                Console.SetCursorPosition(0, 4);
-                Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
+            if (!MainMenuMazeSetupUI())
                 continue;
-            }
-            if (mapSizeX % 2 == 0)
-                mapSizeX--;
-
-            mapSizeX = Math.Clamp(mapSizeX, minMapSize, maxMapSizeX);
-
-
-            Console.SetCursorPosition(0, 2);
-            Console.Write("Height: ");
-            try
-            {
-                mapSizeY = int.Parse(Console.ReadLine());
-            }
-            catch
-            {
-                Console.SetCursorPosition(0, 4);
-                Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
-                continue;
-            }
-            if (mapSizeY % 2 == 0)
-                mapSizeY--;
-
-            mapSizeY = Math.Clamp(mapSizeY, minMapSize, maxMapSizeY);
-
-            try
-            {
-                Console.SetWindowSize(mapSizeX + 12, mapSizeY + 1);
-            }
-            catch
-            {
-                Console.SetCursorPosition(0, 4);
-                Console.Write($"{SetColor(255, 0, 0)}This map is too big for the size of the window!{SetColor(255, 255, 255)}");
-                continue;
-            }
 
             break;
         }
@@ -454,6 +391,83 @@ public class Game
         Console.CursorVisible = false;
         Console.Clear();
     }
+
+    private void DrawMainMenuInfoUI()
+    {
+        Console.SetCursorPosition(0, 0);
+        Console.WriteLine("Enter the map size:");
+        Console.WriteLine("Width:                                                        ");
+        Console.Write("Height:                                                           \n\n\n\n");
+
+        Console.WriteLine($"{SetColor(255, 255, 255)}v You");
+        Console.WriteLine($"{SetColor(255, 255, 0)}* {SetColor(255, 255, 255)}Coin");
+        Console.WriteLine($"{SetColor(255, 0, 0)}x {SetColor(255, 255, 255)}Escape closed");
+        Console.WriteLine($"{SetColor(0, 255, 0)}^ {SetColor(255, 255, 255)}Escape");
+        Console.WriteLine($"{SetColor(69, 69, 69)}# {SetColor(255, 255, 255)}Wall \n");
+
+        Console.WriteLine($"{SetColor(255, 255, 255)}Press {SetColor(0, 255, 0)}T {SetColor(255, 255, 255)}To surrender \n");
+
+        if (playerEscaped)
+            Console.WriteLine($"{SetColor(0, 255, 0)}Congratulations! You escaped the maze! {SetColor(255, 255, 255)}");
+
+        else if (playerSurrendered)
+            Console.WriteLine($"{SetColor(255, 0, 0)}You have surrendered... {SetColor(255, 255, 255)}");
+
+        Console.Write($"\n\nTo {SetColor(0, 255, 0)}escape{SetColor(255, 255, 255)} you have to get all {SetColor(255, 255, 0)}10 coins{SetColor(255, 255, 255)}");
+    }
+
+    private bool MainMenuMazeSetupUI()
+    {
+        Console.SetCursorPosition(0, 1);
+        Console.Write("Width: ");
+        try
+        {
+            mapSizeX = int.Parse(Console.ReadLine());
+        }
+        catch
+        {
+            Console.SetCursorPosition(0, 4);
+            Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
+            return false;
+        }
+        if (mapSizeX % 2 == 0)
+            mapSizeX--;
+
+        mapSizeX = Math.Clamp(mapSizeX, minMapSize, maxMapSizeX);
+
+
+        Console.SetCursorPosition(0, 2);
+        Console.Write("Height: ");
+        try
+        {
+            mapSizeY = int.Parse(Console.ReadLine());
+        }
+        catch
+        {
+            Console.SetCursorPosition(0, 4);
+            Console.Write($"{SetColor(255, 0, 0)}Wrong input!{SetColor(255, 255, 255)}                                                            ");
+            return false;
+        }
+        if (mapSizeY % 2 == 0)
+            mapSizeY--;
+
+        mapSizeY = Math.Clamp(mapSizeY, minMapSize, maxMapSizeY);
+
+        try
+        {
+            Console.SetWindowSize(mapSizeX + 12, mapSizeY + 1);
+        }
+        catch
+        {
+            Console.SetCursorPosition(0, 4);
+            Console.Write($"{SetColor(255, 0, 0)}This map is too big for the size of the window!{SetColor(255, 255, 255)}");
+            return false;
+        }
+
+        return true;
+    }
+
+
 
     private void DrawMap()
     {
