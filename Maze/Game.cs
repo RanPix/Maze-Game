@@ -4,12 +4,10 @@ namespace Maze;
 
 public class Game
 {
-    int mapSizeX = 159;
-    private int mapSizeY = 49;
+    int mapSizeX = 0;
+    private int mapSizeY = 0;
 
-    private const int maxMapSizeX = 159;
-    private const int maxMapSizeY = 159;
-
+    private const int maxMapSize = 159;
     private const int minMapSize = 7;
 
     private GenerationFlags[,] generationMap = new GenerationFlags[0, 0];
@@ -43,8 +41,8 @@ public class Game
             GetInput();
             CheckInput();
 
-            EscapeUpdate();
             MovePlayer();
+            EscapeUpdate();
 
             if (playerEscaped || playerSurrendered)
                 SetupGame();
@@ -369,7 +367,7 @@ public class Game
     {
         Console.SetCursorPosition(0, mapSizeY);
 
-        Console.Write($"{SetColor(255, 255, 255)}Collected Coins: {SetColor(255, 255, 0)}{collectedCoins} {SetColor(255, 255, 255)}");
+        Console.Write($"{SetColor(255, 255, 255)}Coins Collected: {SetColor(255, 255, 0)}{collectedCoins} {SetColor(255, 255, 255)}");
     }
 
     private void MainMenuUI() //Я НЕ ЗНАЮ ЯК ТО ПРАВИЛЬНО РОБИТИ
@@ -433,7 +431,7 @@ public class Game
         if (mapSizeX % 2 == 0)
             mapSizeX--;
 
-        mapSizeX = Math.Clamp(mapSizeX, minMapSize, maxMapSizeX);
+        mapSizeX = Math.Clamp(mapSizeX, minMapSize, maxMapSize);
 
 
         Console.SetCursorPosition(0, 2);
@@ -451,7 +449,7 @@ public class Game
         if (mapSizeY % 2 == 0)
             mapSizeY--;
 
-        mapSizeY = Math.Clamp(mapSizeY, minMapSize, maxMapSizeY);
+        mapSizeY = Math.Clamp(mapSizeY, minMapSize, maxMapSize);
 
         try
         {
@@ -466,7 +464,6 @@ public class Game
 
         return true;
     }
-
 
 
     private void DrawMap()
